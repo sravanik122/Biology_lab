@@ -1,0 +1,53 @@
+{
+  "final_state": {
+    "time_min": "number",
+    "cells": "number",
+    "sugar_g_per_L": "number",
+    "co2_generated_g": "number",
+    "co2_rate_g_per_min": "number",
+    "ethanol_g_per_L": "number",
+    "bubble_rate": "number",
+    "doubling_time_min_estimate": "number",
+    "notes": "string"
+  },
+
+  "timeline": {
+    "t_min": "number[]",
+    "cells": "number[]",
+    "sugar_g_per_L": "number[]",
+    "co2_rate_g_per_min": "number[]",
+    "bubble_rate": "number[]",
+    "ethanol_g_per_L": "number[]",
+
+    "units": {
+      "t_min": "minutes",
+      "cells": "count",
+      "sugar_g_per_L": "g/L",
+      "co2_rate_g_per_min": "g/min",
+      "bubble_rate": "events/min",
+      "ethanol_g_per_L": "g/L"
+    }
+  },
+
+  "visual": {
+    "max_bubbles": "number",
+    "particle_density": "number",
+    "bubble_color": "string",
+    "animation_speed_multiplier": "number",
+
+    "bubble_positions": {
+      "type": "array",
+      "items": {
+        "x": "number",
+        "y": "number",
+        "size": "number"
+      },
+      "description": "Optional—backend may provide preset bubble coordinates (0–1 normalized)."
+    }
+  },
+
+  "meta": {
+    "description": "This output schema defines the complete structure returned by the yeast respiration simulation. All timeline arrays must be equal in length and aligned with t_min. Visual parameters are optional but recommended for animation.",
+    "version": "1.0.0"
+  }
+}

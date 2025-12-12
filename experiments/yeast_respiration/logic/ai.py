@@ -19,6 +19,7 @@ from experiments.yeast_respiration.logic.sim import simulate
 
 _MODEL_CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "model_config.json")
 
+
 def _load_model_config() -> dict:
     try:
         with open(_MODEL_CFG_PATH, "r", encoding="utf-8") as f:
@@ -37,7 +38,9 @@ def _load_model_config() -> dict:
             "random_seed": 42,
         }
 
+
 _MODEL_CFG = _load_model_config()
+
 
 class MinMaxScaler:
     def __init__(self, min_: Optional[np.ndarray] = None, max_: Optional[np.ndarray] = None):
@@ -57,6 +60,7 @@ class MinMaxScaler:
 
     def inverse_transform(self, X_scaled: np.ndarray) -> np.ndarray:
         return X_scaled * self.range_ + self.min_
+
 
 def build_model(input_dim: int, output_dim: int, cfg: Optional[dict] = None) -> tf.keras.Model:
     if cfg is None:
@@ -86,6 +90,7 @@ def build_model(input_dim: int, output_dim: int, cfg: Optional[dict] = None) -> 
     model.compile(optimizer=opt, loss=cfg.get("loss", "mse"), metrics=cfg.get("metrics", ["mae"]))
     return model
 
+
 _INPUT_ORDER = [
     "initial_cells",
     "inoculum_volume_ml",
@@ -102,6 +107,7 @@ _INPUT_ORDER = [
     "sampling_interval_min",
     "enable_noise",
 ]
+
 
 def _encode_inputs(inp: ExperimentInputs) -> np.ndarray:
     aer_options = ["aerobic", "microaerobic", "anaerobic"]
@@ -130,17 +136,111 @@ def _encode_inputs(inp: ExperimentInputs) -> np.ndarray:
     vals.append(1.0 if inp.enable_noise else 0.0)
     return np.array(vals, dtype=np.float32)
 
+
+def _fit_A_k(t: np.ndarray, y: np.ndarray, k_grid=None) -> Tuple[float, float]:
+    t = np.asarray(t, dtype=float)
+    y = np.asarray(y, dtype=float)
+    if t.size == 0 or y.size == 0:
+        return 0.0, 0.001
+    if k_grid is None:
+        k_grid = np.logspace(-4, 0, 50)
+    best_A, best_k, best_err = 0.0, 0.01, float("inf")
+    A_guess = max(y.max(), 1e-6)
+    for k in k_grid:
+        denom = (1.0 - np.exp(-k * t))
+        if np.allclose(denom, 0.0):
+            continue
+        A = np.sum(y * denom) / (np.sum(denom * denom) + 1e-12)
+        pred = A * denom
+        err = np.mean((pred - y) ** 2)
+        if err < best_err:
+            best_err = err
+            best_A = float(A)
+            best_k = float(k)
+    # local refine around best_k
+    k0 = best_k
+    kgrid = np.linspace(max(1e-6, k0 * 0.5), k0 * 1.5 + 1e-6, 30)
+    for k in kgrid:
+        denom = (1.0 - np.exp(-k * t))
+        if np.allclose(denom, 0.0):
+            continue
+        A = np.sum(y * denom) / (np.sum(denom * denom) + 1e-12)
+        pred = A * denom
+        err = np.mean((pred - y) ** 2)
+        if err < best_err:
+            best_err = err
+            best_A = float(A)
+            best_k = float(k)
+    if not np.isfinite(best_A):
+        best_A = float(y.max() if y.size else 0.0)
+    if not np.isfinite(best_k) or best_k <= 0:
+        best_k = 0.001
+    return best_A, best_k
+
+
 def _rows_to_xy(rows: List[TrainingRow]) -> Tuple[np.ndarray, np.ndarray, List[str]]:
     X = []
     y = []
     for r in rows:
         X.append(_encode_inputs(r.inputs))
-        t = r.target
-        cells_final = float(t.get("final_cells", 0.0))
-        co2_final = float(t.get("co2_generated_g", 0.0))
-        ethanol_final = float(t.get("ethanol_g_per_L", 0.0))
-        y.append([cells_final, 0.01, co2_final, 0.01, ethanol_final, 0.01])
-    return np.vstack(X).astype(np.float32), np.vstack(y).astype(np.float32), []
+        # Prefer precomputed compact params in meta
+        meta = r.meta or {}
+        if "predicted_params" in meta:
+            p = meta["predicted_params"]
+            y.append([p.get("A_cells", 0.0), p.get("k_cells", 0.01),
+                      p.get("A_co2", 0.0), p.get("k_co2", 0.01),
+                      p.get("A_eth", 0.0), p.get("k_eth", 0.01)])
+            continue
+
+        # If target contains timeline arrays, use them
+        t_arr = None
+        cells_ts = None
+        co2_ts = None
+        eth_ts = None
+        if isinstance(r.target, dict) and "timeline_t" in r.target:
+            t_arr = np.asarray(r.target.get("timeline_t", []), dtype=float)
+            cells_ts = np.asarray(r.target.get("timeline_cells", []), dtype=float)
+            co2_ts = np.asarray(r.target.get("timeline_co2", []), dtype=float)
+            eth_ts = np.asarray(r.target.get("timeline_eth", []), dtype=float)
+        else:
+            # fallback: run simulate to produce timelines
+            simres = simulate(r.inputs)
+            t_arr = np.asarray(simres.timeline.t_min, dtype=float)
+            cells_ts = np.asarray(simres.timeline.cells, dtype=float)
+            co2_ts = np.asarray(simres.timeline.co2_rate_g_per_min, dtype=float)
+            eth_ts = np.asarray(simres.timeline.ethanol_g_per_L, dtype=float)
+
+        A_c, k_c = _fit_A_k(t_arr, cells_ts)
+        A_co2, k_co2 = _fit_A_k(t_arr, co2_ts)
+        A_eth, k_eth = _fit_A_k(t_arr, eth_ts)
+        y.append([A_c, k_c, A_co2, k_co2, A_eth, k_eth])
+
+    X = np.vstack(X).astype(np.float32)
+    y = np.vstack(y).astype(np.float32)
+    return X, y, []
+
+
+def save_scalers(path_prefix: str, x_scaler: MinMaxScaler, y_scaler: MinMaxScaler) -> None:
+    d = os.path.dirname(path_prefix)
+    if d and not os.path.exists(d):
+        os.makedirs(d, exist_ok=True)
+    np.save(path_prefix + "_x_min.npy", x_scaler.min_)
+    np.save(path_prefix + "_x_max.npy", x_scaler.max_)
+    np.save(path_prefix + "_y_min.npy", y_scaler.min_)
+    np.save(path_prefix + "_y_max.npy", y_scaler.max_)
+
+
+def load_scalers(path_prefix: str) -> Tuple[MinMaxScaler, MinMaxScaler]:
+    x_min = np.load(path_prefix + "_x_min.npy")
+    x_max = np.load(path_prefix + "_x_max.npy")
+    y_min = np.load(path_prefix + "_y_min.npy")
+    y_max = np.load(path_prefix + "_y_max.npy")
+    x = MinMaxScaler(min_=x_min, max_=x_max)
+    x.range_ = np.where(x.max_ - x.min_ <= 0, 1.0, (x.max_ - x.min_))
+    y = MinMaxScaler(min_=y_min, max_=y_max)
+    y.range_ = np.where(y.max_ - y.min_ <= 0, 1.0, (y.max_ - y.min_))
+    return x, y
+
 
 def params_to_timeline(predicted_params: Dict[str, float], total_time_min: float, sampling_interval_min: float) -> Timeline:
     dt = float(sampling_interval_min)
@@ -163,6 +263,7 @@ def params_to_timeline(predicted_params: Dict[str, float], total_time_min: float
         ethanol_g_per_L=[float(x) for x in eth_ts],
     )
     return timeline
+
 
 def train_model(
     rows: List[TrainingRow],
@@ -221,6 +322,8 @@ def train_model(
 
     if save_model:
         model.save(model_save_path)
+        # persist scalers next to model using same prefix
+        save_scalers(model_save_path, x_scaler, y_scaler)
 
     result = ModelTrainingResult(
         model_version=model_save_path,
@@ -231,10 +334,12 @@ def train_model(
     result.meta = {"x_scaler": x_scaler, "y_scaler": y_scaler}
     return result
 
+
 def load_model(path: Optional[str] = None) -> tf.keras.Model:
     if path is None:
         path = _MODEL_CFG.get("model_save_path", "./models/yeast_respiration_model.keras")
     return tf.keras.models.load_model(path)
+
 
 def predict(
     model: tf.keras.Model,
@@ -255,8 +360,19 @@ def predict(
     X = np.vstack([_encode_inputs(inp) for inp in inputs]).astype(np.float32)
 
     if x_scaler is None:
-        x_scaler = MinMaxScaler()
-        x_scaler.fit(X)
+        # try to load saved scalers next to model if available
+        model_path = cfg.get("model_save_path")
+        if model_path and os.path.exists(model_path + "_x_min.npy"):
+            try:
+                x_s, y_s = load_scalers(model_path)
+                x_scaler, y_scaler = x_s, y_s
+            except Exception:
+                x_scaler = MinMaxScaler()
+                x_scaler.fit(X)
+        else:
+            x_scaler = MinMaxScaler()
+            x_scaler.fit(X)
+
     Xs = x_scaler.transform(X)
 
     preds_scaled = model.predict(Xs)

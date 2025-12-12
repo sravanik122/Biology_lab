@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "schema_version": "1.0",
+    "author": "team_virtual_lab",
+    "last_modified": "2025-12-12",
+    "description": "Yeast respiration (batch fermentation) config — constants, defaults, ranges and visual hints. Assumes well-mixed batch culture; simplified Monod kinetics and fixed yields."
+  },
+
+  "units": {
+    "time": "minutes",
+    "concentration": "g/L",
+    "cells": "CFU (count)",
+    "volume": "L"
+  },
+
+  "default_sampling_interval_min": 1.0,
+  "min_sampling_interval_min": 0.1,
+  "max_sampling_interval_min": 60,
+  "default_total_time_min": 120,
+  "min_total_time_min": 1,
+  "max_total_time_min": 10000,
+
+  "noise": {
+    "measurement_sigma": 0.02,
+    "cell_noise_factor": 0.01,
+    "enable_noise": true
+  },
+
+  "default_ranges": {
+    "temperature_c": { "min": 5, "max": 45 },
+    "initial_sugar_g_per_L": { "min": 0, "max": 200 },
+    "initial_cells": { "min": 1, "max": 100000000 },
+    "sampling_interval_min": { "min": 0.1, "max": 60 },
+    "total_time_min": { "min": 1, "max": 10000 }
+  },
+
+  "default_inputs": {
+    "initial_cells": 100000,
+    "initial_sugar_g_per_L": 20,
+    "temperature_c": 30,
+    "pH": 5.5,
+    "aeration": "anaerobic",
+    "inoculum_volume_ml": 1.0,
+    "total_time_min": 120,
+    "sampling_interval_min": 1.0,
+    "seed": null,
+    "media_volume_L": 0.05,
+    "stirring_rpm": 0
+  },
+
+  "constants": {
+    "optimal_temperature_c": 30,
+    "optimal_pH": 5.5,
+
+    "ks_glucose_g_per_L": 0.5,
+    "mu_max_per_min": 0.03,
+
+    "yield_cells_per_g_sugar": 1000000,
+    "co2_per_g_sugar": 1.0,
+    "ethanol_per_g_sugar": 0.51,
+
+    "temperature_sigma": 8.0,
+    "pH_tolerance": 2.5,
+
+    "oxygen_factor": {
+      "aerobic": 1.0,
+      "microaerobic": 0.5,
+      "anaerobic": 0.05
+    }
+  },
+
+  "derived_constants": {
+    "glucose_molar_mass_g_per_mol": 180.16,
+    "seconds_per_minute": 60
+  },
+
+  "vessel": {
+    "media_volume_L": 0.05,
+    "headspace_fraction": 0.2,
+    "default_stirring_rpm": 0
+  },
+
+  "strain_presets": {
+    "lab_Saccharomyces_cerevisiae": { "mu_max_multiplier": 1.0, "yield_multiplier": 1.0 },
+    "bakers_yeast": { "mu_max_multiplier": 1.05, "yield_multiplier": 1.0 },
+    "wine_yeast": { "mu_max_multiplier": 1.1, "yield_multiplier": 1.02 }
+  },
+
+  "visual": {
+    "base_bubble_multiplier": 10,
+    "max_bubbles": 120,
+    "max_particles": 400,
+    "bubble_color": "#F2C94C",
+    "bubble_size_scale": 1.0,
+    "animation_speed_multiplier": 1.0
+  },
+
+  "flags": {
+    "use_stoichiometry": false,
+    "enable_visuals": true,
+    "enable_advanced_oxygen_model": false
+  },
+
+  "notes": "This config models a closed batch culture (no feed). CO2 and ethanol yields are simplified fixed ratios per gram sugar consumed. Change mu_max_per_min or yield_cells_per_g_sugar to tune growth speed or substrate usage."
+}

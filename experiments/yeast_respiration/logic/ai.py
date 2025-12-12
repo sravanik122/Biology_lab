@@ -248,6 +248,8 @@ def params_to_timeline(predicted_params: Dict[str, float], total_time_min: float
     t = np.linspace(0.0, total_time_min, steps + 1).tolist()
 
     def _curve(A: float, k: float, t_list: List[float]) -> List[float]:
+        k = float(max(min(k, 1.0), 1e-6)) 
+        A = float(max(A, 0.0))
         return [float(A * (1.0 - np.exp(-k * ti))) for ti in t_list]
 
     cells_ts = _curve(predicted_params.get("A_cells", 0.0), predicted_params.get("k_cells", 0.0), t)

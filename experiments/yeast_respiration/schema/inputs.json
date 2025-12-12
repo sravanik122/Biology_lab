@@ -1,0 +1,174 @@
+{
+  "initial_cells": {
+    "type": "number",
+    "units": "cells",
+    "min": 1,
+    "max": 100000000,
+    "default": 100000,
+    "description": "Initial viable yeast cell count (CFU). Use this OR inoculum_volume_ml to define starting population.",
+    "ui": { "control": "number", "step": 1000, "group": "Biology" }
+  },
+
+  "inoculum_volume_ml": {
+    "type": "number",
+    "units": "mL",
+    "min": 0.01,
+    "max": 1000,
+    "default": 1.0,
+    "description": "Volume of yeast inoculum added. If initial_cells is null, initial population = inoculum_volume_ml * inoculum_cfu_per_ml.",
+    "ui": { "control": "number", "step": 0.1, "group": "Biology" }
+  },
+
+  "inoculum_cfu_per_ml": {
+    "type": "number",
+    "units": "cells/mL",
+    "min": 1,
+    "max": 1e10,
+    "default": 100000,
+    "description": "CFU per mL in inoculum (used with inoculum_volume_ml to infer initial_cells when needed).",
+    "ui": { "control": "number", "step": 1000, "group": "Biology" }
+  },
+
+  "initial_sugar_g_per_L": {
+    "type": "number",
+    "units": "g/L",
+    "min": 0,
+    "max": 300,
+    "default": 20,
+    "description": "Initial concentration of fermentable sugar (glucose) in the medium.",
+    "ui": { "control": "slider", "step": 0.5, "group": "Environment" }
+  },
+
+  "media_volume_L": {
+    "type": "number",
+    "units": "L",
+    "min": 0.001,
+    "max": 10,
+    "default": 0.05,
+    "description": "Liquid media volume. Used to scale product concentrations (ethanol, CO₂ per L).",
+    "ui": { "control": "number", "step": 0.01, "group": "Environment" }
+  },
+
+  "headspace_fraction": {
+    "type": "number",
+    "units": "fraction",
+    "min": 0,
+    "max": 0.9,
+    "default": 0.2,
+    "description": "Fraction of vessel volume that is headspace (affects gas accumulation/visualization).",
+    "ui": { "control": "slider", "step": 0.05, "group": "Environment" }
+  },
+
+  "temperature_c": {
+    "type": "number",
+    "units": "°C",
+    "min": 5,
+    "max": 45,
+    "default": 30,
+    "description": "Incubation temperature. Affects growth rate (optimum ≈ 30°C for many S. cerevisiae strains).",
+    "ui": { "control": "slider", "step": 0.5, "group": "Environment" }
+  },
+
+  "pH": {
+    "type": "number",
+    "units": "pH",
+    "min": 3.0,
+    "max": 8.0,
+    "default": 5.5,
+    "description": "Medium acidity. Yeast performance typically peaks around pH 4–6.",
+    "ui": { "control": "slider", "step": 0.1, "group": "Environment" }
+  },
+
+  "aeration": {
+    "type": "enum",
+    "units": "category",
+    "options": ["aerobic", "microaerobic", "anaerobic"],
+    "default": "anaerobic",
+    "description": "Oxygen availability mode. Aeration strongly shifts metabolism (respiration vs fermentation).",
+    "ui": { "control": "dropdown", "group": "Environment" }
+  },
+
+  "agitation_rpm": {
+    "type": "number",
+    "units": "rpm",
+    "min": 0,
+    "max": 2000,
+    "default": 0,
+    "description": "Shaking/stirring speed. Higher rpm increases dissolved oxygen and mixing.",
+    "ui": { "control": "number", "step": 10, "group": "Environment" }
+  },
+
+  "strain": {
+    "type": "enum",
+    "units": "preset",
+    "options": ["lab_Saccharomyces_cerevisiae", "bakers_yeast", "wine_yeast", "wild_type"],
+    "default": "lab_Saccharomyces_cerevisiae",
+    "description": "Yeast strain preset that applies small multipliers to growth/yield parameters.",
+    "ui": { "control": "dropdown", "group": "Biology" }
+  },
+
+  "total_time_min": {
+    "type": "number",
+    "units": "minutes",
+    "min": 1,
+    "max": 20160,
+    "default": 120,
+    "description": "Total simulation time in minutes (e.g., 120 = 2 hours).",
+    "ui": { "control": "number", "step": 1, "group": "Run" }
+  },
+
+  "sampling_interval_min": {
+    "type": "number",
+    "units": "minutes",
+    "min": 0.1,
+    "max": 60,
+    "default": 1.0,
+    "description": "Time interval between output samples in minutes (controls timeline resolution).",
+    "ui": { "control": "number", "step": 0.1, "group": "Run" }
+  },
+
+  "enable_noise": {
+    "type": "boolean",
+    "units": "flag",
+    "default": true,
+    "description": "Toggle measurement/process noise in the simulation (useful for realistic teacher datasets).",
+    "ui": { "control": "toggle", "group": "Run" }
+  },
+
+  "seed": {
+    "type": "number",
+    "units": "int|null",
+    "min": 0,
+    "max": 2147483647,
+    "default": null,
+    "description": "Random seed for reproducibility. Leave null for non-deterministic runs.",
+    "ui": { "control": "number", "step": 1, "group": "Run" }
+  },
+
+  "model_mode": {
+    "type": "enum",
+    "units": "category",
+    "options": ["formula", "ml"],
+    "default": "formula",
+    "description": "Simulation mode: 'formula' uses the scientific model; 'ml' uses an ML surrogate (if trained).",
+    "ui": { "control": "segmented", "group": "Advanced" }
+  },
+
+  "target_day_for_prediction": {
+    "type": "number",
+    "units": "minutes",
+    "min": 1,
+    "max": 20160,
+    "default": 1440,
+    "description": "When using ML mode, predict state at this future time (minutes). Ignored in formula mode.",
+    "ui": { "control": "number", "step": 60, "group": "Advanced" }
+  },
+
+  "notes": {
+    "type": "string",
+    "units": "text",
+    "default": "",
+    "description": "Optional user note (not used by simulation).",
+    "ui": { "control": "textarea", "group": "Meta" }
+  }
+}

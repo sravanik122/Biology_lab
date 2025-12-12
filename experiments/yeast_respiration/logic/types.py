@@ -1,17 +1,3 @@
-"""
-experiments/yeast_respiration/logic/types.py
-
-Pydantic models for the Yeast Respiration experiment.
-
-Contains:
-- ExperimentInputs
-- FinalState
-- Timeline
-- VisualHints
-- SimulationResult
-- ML helper types: TrainingRow, ModelPrediction, ModelTrainingResult
-"""
-
 from __future__ import annotations
 from pydantic import BaseModel, Field, validator, root_validator
 from typing import List, Dict, Optional, Literal, Any

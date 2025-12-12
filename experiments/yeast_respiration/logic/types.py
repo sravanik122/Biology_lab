@@ -185,7 +185,7 @@ class ModelTrainingResult(BaseModel):
     history: Optional[Dict[str, List[float]]] = Field(None, description="Training history dict (loss, val_loss, metrics, etc.)")
     trained_on_rows: Optional[int] = Field(None, description="Number of training samples used")
     metrics: Optional[Dict[str, float]] = Field(None, description="Final metrics summary on validation set")
-
+    meta: Optional[Dict[str, Any]] = Field(None, description="Optional meta (scalers, paths, seeds)")
     class Config:
         orm_mode = True
 
